@@ -183,7 +183,7 @@ int main(int argc, char **argv)
 
     if (!info.support_unmap)
     {
-        err(EXIT_FAILURE, "%s: not support unmap", path);
+        errx(EXIT_FAILURE, "%s: not support unmap", path);
     }
     
 
