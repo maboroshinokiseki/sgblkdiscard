@@ -181,6 +181,12 @@ int main(int argc, char **argv)
         err(EXIT_FAILURE, "%s: failed to get device info", path);
     }
 
+    if (!info.support_unmap)
+    {
+        err(EXIT_FAILURE, "%s: not support unmap", path);
+    }
+    
+
     /* check offset alignment to the sector size */
     if (offset % info.sector_size)
     {
@@ -231,7 +237,9 @@ int main(int argc, char **argv)
 
 #ifdef HAVE_LIBBLKID
     if (force)
+    {
         warnx("Operation forced, data will be lost!");
+    }
     else
     {
         /* Check for existing signatures on the device */
