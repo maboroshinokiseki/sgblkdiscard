@@ -38,6 +38,7 @@ static void usage(const char *program_name)
 
     fputs(USAGE_OPTIONS, out);
     fputs(" -f, --force         disable all checking\n", out);
+    fputs(" -i, --interactive   interactive mode\n", out);
     fputs(" -o, --offset <num>  offset in bytes to discard from\n", out);
     fputs(" -l, --length <num>  length of bytes to discard from the offset\n", out);
     fputs(" -p, --step <num>    size of the discard iterations within the offset\n", out);
@@ -107,22 +108,24 @@ int main(int argc, char **argv)
         {"length", required_argument, NULL, 'l'},
         {"step", required_argument, NULL, 'p'},
         {"verbose", no_argument, NULL, 'v'},
+        {"interactive", no_argument, NULL, 'i'},
         {NULL, 0, NULL, 0}};
 
     setlocale(LC_ALL, "");
 
     bool force = false;
     bool verbose = false;
+    bool interactive = false;
     uint64_t offset = 0;
     uint64_t length = UINT64_MAX;
     uint64_t step = 0;
     int c;
-    while ((c = getopt_long(argc, argv, "hfVvo:l:p:", longopts, NULL)) != -1)
+    while ((c = getopt_long(argc, argv, "hfVvio:l:p:", longopts, NULL)) != -1)
     {
         switch (c)
         {
         case 'f':
-            force = 1;
+            force = true;
             break;
         case 'l':
             length = strtosize_or_err(optarg, "failed to parse length");
@@ -134,10 +137,13 @@ int main(int argc, char **argv)
             step = strtosize_or_err(optarg, "failed to parse step");
             break;
         case 'v':
-            verbose = 1;
+            verbose = true;
             break;
         case 'h':
             usage(program_name);
+            break;
+        case 'i':
+            interactive = true;
             break;
         case 'V':
             printf("%s version %d.%d", PROJECT_NAME, PROJECT_VERSION_MAJOR, PROJECT_VERSION_MINOR);
@@ -146,6 +152,11 @@ int main(int argc, char **argv)
         default:
             errtryhelp(program_name, EXIT_FAILURE);
         }
+    }
+
+    if (force)
+    {
+        interactive = false;
     }
 
     if (optind == argc)
@@ -185,7 +196,6 @@ int main(int argc, char **argv)
     {
         errx(EXIT_FAILURE, "%s: not support unmap", path);
     }
-    
 
     /* check offset alignment to the sector size */
     if (offset % info.sector_size)
@@ -219,19 +229,18 @@ int main(int argc, char **argv)
     char last_char = path[strlen(path) - 1];
     if (isdigit(last_char))
     {
-        while (true)
+        if (interactive)
         {
-            printf("%s seems like a partition instead of a disk, this program will perform on the whole disk instead of the partition only, continue?(Y/N)",
-                   path);
-            char command = getchar();
-            if (command == 'Y' || command == 'y')
+            if (!ask_for_yn("Operation is applied to disk instead of partition. Continue?"))
             {
-                break;
+                exit(EXIT_FAILURE);
             }
-            else if (command == 'N' || command == 'n')
-            {
-                exit(EXIT_SUCCESS);
-            }
+        }
+        else
+        {
+            errx(EXIT_FAILURE,
+                 "Operation is applied to disk instead of partition. "
+                 "Use the -f option to override.");
         }
     }
 
@@ -246,21 +255,25 @@ int main(int argc, char **argv)
         switch (probe_device(fd, path))
         {
         case 0: /* signature detected */
-            /*
-			 * Only require force in interactive mode to avoid
-			 * breaking existing scripts
-			 */
-            if (isatty(STDIN_FILENO))
+            if (interactive)
+            {
+                if (!ask_for_yn("This is destructive operation, data will be lost! Continue?"))
+                {
+                    exit(EXIT_FAILURE);
+                }
+            }
+            else
             {
                 errx(EXIT_FAILURE,
                      "This is destructive operation, data will "
                      "be lost! Use the -f option to override.");
             }
+
             break;
         case 1: /* no signature */
             break;
         default: /* error */
-            err(EXIT_FAILURE, "failed to probe the device");
+            err(EXIT_FAILURE, "Failed to probe the device.");
             break;
         }
     }

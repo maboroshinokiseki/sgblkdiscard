@@ -48,11 +48,11 @@ static int parse_size(const char *str, uint64_t *result, int *power_index)
     }
 
     /* Only positive numbers are acceptable
-	 *
-	 * Note that this check is not perfect, it would be better to
-	 * use lconv->negative_sign. But coreutils use the same solution,
-	 * so it's probably good enough...
-	 */
+     *
+     * Note that this check is not perfect, it would be better to
+     * use lconv->negative_sign. But coreutils use the same solution,
+     * so it's probably good enough...
+     */
     p = str;
     while (isspace((unsigned char)*p))
         p++;
@@ -76,8 +76,8 @@ static int parse_size(const char *str, uint64_t *result, int *power_index)
     p = end;
 
     /*
-	 * Check size suffixes
-	 */
+     * Check size suffixes
+     */
 check_suffix:
     if (*(p + 1) == 'i' && (*(p + 2) == 'B' || *(p + 2) == 'b') && !*(p + 3))
         base = 1024; /* XiB, 2^N */
@@ -149,10 +149,10 @@ check_suffix:
         do_scale_by_power(&frac_base, base, pwr);
 
         /* maximal divisor for last digit (e.g. for 0.05 is
-		 * frac_div=100, for 0.054 is frac_div=1000, etc.)
-		 *
-		 * Reduce frac if too large.
-		 */
+         * frac_div=100, for 0.054 is frac_div=1000, etc.)
+         *
+         * Reduce frac if too large.
+         */
         while (frac_div < frac)
         {
             if (frac_div <= UINT64_MAX / 10)
@@ -171,12 +171,12 @@ check_suffix:
         }
 
         /*
-		 * Go backwardly from last digit and add to result what the
-		 * digit represents in the frac_base. For example 0.25G
-		 *
-		 *  5 means 1GiB / (100/5)
-		 *  2 means 1GiB / (10/2)
-		 */
+         * Go backwardly from last digit and add to result what the
+         * digit represents in the frac_base. For example 0.25G
+         *
+         *  5 means 1GiB / (100/5)
+         *  2 means 1GiB / (10/2)
+         */
         do
         {
             unsigned int seg = frac % 10;           /* last digit of the frac */
@@ -243,7 +243,7 @@ static inline uint64_t u64_from_big_endian_bytes(const void *p)
 #define SG_BLOCK_LIMITS_VPD_PAGE_LEN 64
 #define SG_UNMAP_CMD 0x42
 #define SG_UNMAP_CMD_LEN 10
-#define SG_UNMAP_PARAMETER_LEN (8 + 16) //length info + block descriptor
+#define SG_UNMAP_PARAMETER_LEN (8 + 16) // length info + block descriptor
 
 static int sg_read_capacity16(int fd, device_info_t *info)
 {
@@ -422,4 +422,30 @@ int gettime_monotonic(struct timeval *tv)
         tv->tv_usec = ts.tv_nsec / 1000;
     }
     return ret;
+}
+
+#define YN_STR_MAX 8
+
+bool ask_for_yn(const char *message)
+{
+    char str[YN_STR_MAX];
+    while (true)
+    {
+        printf(message);
+        printf("(Yes/No):");
+        if (fgets(str, YN_STR_MAX, stdin) == NULL)
+        {
+            err(EXIT_FAILURE, "Failed to read from stdin.");
+        }
+
+        if (strcasecmp(str, "y\n") == 0 || strcasecmp(str, "yes\n") == 0)
+        {
+            return true;
+        }
+
+        if (strcasecmp(str, "n\n") == 0 || strcasecmp(str, "no\n") == 0)
+        {
+            return false;
+        }
+    }
 }

@@ -87,3 +87,5 @@ int sg_unmap(int fd, const device_info_t *info, uint64_t offset, uint64_t length
 void errtryhelp(const char *program_name, int exit_code);
 
 int gettime_monotonic(struct timeval *tv);
+
+bool ask_for_yn(const char *message);
